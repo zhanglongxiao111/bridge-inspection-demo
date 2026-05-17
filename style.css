@@ -651,3 +651,22 @@ input:checked + .slider-toggle:before {
   50% { opacity: 0; }
 }
 .tab-content.hidden { display: none; }
+/* FPV Immersive Mode */
+header, .sidebar-left, .drone-widget {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+body.fpv-mode header {
+    opacity: 0;
+    transform: translateY(-20px);
+    pointer-events: none;
+}
+body.fpv-mode .sidebar-left {
+    opacity: 0;
+    transform: translateX(-20px);
+    pointer-events: none;
+}
+body.fpv-mode .drone-widget {
+    opacity: 0;
+    transform: translateY(20px);
+    pointer-events: none;
+}
