@@ -8,105 +8,242 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="/bridge-inspection-demo/assets/index-CiLXPRE8.js"></script>
-    <link rel="stylesheet" crossorigin href="/bridge-inspection-demo/assets/index-BYCjSwit.css">
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.116/Build/Cesium/Cesium.js"></script>
+    <link href="https://cesium.com/downloads/cesiumjs/releases/1.116/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <script type="module" crossorigin src="/bridge-inspection-demo/assets/index-CnvA6weV.js"></script>
+    <link rel="stylesheet" crossorigin href="/bridge-inspection-demo/assets/index-B9wnfT5h.css">
   </head>
   <body>
     <!-- Background 3D Canvas -->
     <div id="canvas-container"></div>
 
-    <!-- UI Overlay -->
-    <div id="ui-layer">
-      <!-- Top Bar -->
-      <header class="top-bar glass-panel">
-        <div class="logo">🌉 DJI Cloud API - 桥梁巡检平台</div>
+    <!-- UI Overlay (App Shell) -->
+    <div id="ui-layer" class="app-shell">
+      <!-- Global Top Navbar -->
+      <header class="global-header glass-panel">
+        <div class="header-left">
+          <div class="logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+            <span>DJI Cloud API · 桥梁孪生指控中心</span>
+          </div>
+          <nav class="main-nav">
+            <a href="#" class="nav-item" data-target="view-command-center">指挥中心</a>
+            <a href="#" class="nav-item active" data-target="view-flight-control">飞行控制</a>
+            <a href="#" class="nav-item" data-target="view-resource-management">资源管理</a>
+            <a href="#" class="nav-item" data-target="view-workflow">工作流</a>
+            <a href="#" class="nav-item" data-target="view-system">系统管理</a>
+          </nav>
+        </div>
         <div class="header-right">
           <div class="status-indicators">
-            <span class="status online">● 设备在线 (M350 RTK)</span>
+            <span class="status online">● M350 RTK 在线</span>
             <span class="status rtk">● RTK FIX</span>
           </div>
           <button id="theme-toggle" class="theme-btn" title="切换主题">
-            <!-- Sun Icon (for dark mode to switch to light) -->
             <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-            <!-- Moon Icon (for light mode to switch to dark) -->
             <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
           </button>
+          <div class="user-profile">
+            <img src="https://ui-avatars.com/api/?name=Admin&background=0D8ABC&color=fff" alt="User" class="avatar" />
+          </div>
         </div>
       </header>
 
-      <!-- Left Panel: Task & Assets -->
-      <aside class="left-panel glass-panel">
-        <div class="panel-section">
-          <h3>航线任务</h3>
-          <div class="task-card active">
-            <div class="task-header">
-              <span>索塔精细化巡检</span>
-              <span class="badge">执行中</span>
-            </div>
-            <div class="progress-bar">
-              <div class="progress-fill" style="width: 45%;"></div>
-            </div>
-            <div class="task-meta">进度: 45% | 剩余: 12分30秒</div>
+      <div id="view-flight-control" class="view-container app-body active">
+        <!-- Left Sidebar: Sub-menus & Dock Status -->
+        <aside class="sidebar-left glass-panel">
+          <div class="sidebar-tabs">
+            <button class="tab-btn active">任务飞行</button>
+            <button class="tab-btn">航线规划</button>
+            <button class="tab-btn">巡检记录</button>
           </div>
-        </div>
+          
+          <div class="panel-section dock-status">
+            <h3>机巢状态 (DJI Dock)</h3>
+            <div class="dock-grid">
+              <div class="dock-item">
+                <span class="d-label">舱盖</span>
+                <span class="d-value text-success">开启</span>
+              </div>
+              <div class="dock-item">
+                <span class="d-label">推杆</span>
+                <span class="d-value text-warning">闭合</span>
+              </div>
+              <div class="dock-item">
+                <span class="d-label">风速</span>
+                <span class="d-value">2.4 m/s</span>
+              </div>
+              <div class="dock-item">
+                <span class="d-label">雨量</span>
+                <span class="d-value">0 mm</span>
+              </div>
+              <div class="dock-item">
+                <span class="d-label">温度</span>
+                <span class="d-value">18.5°C</span>
+              </div>
+              <div class="dock-item">
+                <span class="d-label">湿度</span>
+                <span class="d-value">45%</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="panel-section">
+            <h3>当前任务：索塔精细化巡检</h3>
+            <ul class="node-list">
+              <li class="node-item" data-target="pylon-1">📍 1号主索塔</li>
+              <li class="node-item" data-target="pylon-2">📍 2号主索塔</li>
+              <li class="node-item" data-target="cable-left">🕸 左侧斜拉索群</li>
+              <li class="node-item" data-target="pier-3">🏛 3号承台及墩身</li>
+            </ul>
+          </div>
+        </aside>
 
-        <div class="panel-section">
-          <h3>桥梁构件节点</h3>
-          <ul class="node-list">
-            <li class="node-item" data-target="pylon-1">📍 1号主索塔</li>
-            <li class="node-item" data-target="pylon-2">📍 2号主索塔</li>
-            <li class="node-item" data-target="cable-left">🕸 左侧斜拉索群</li>
-            <li class="node-item" data-target="pier-3">🏛 3号承台及墩身</li>
-          </ul>
-        </div>
-        
-        <div class="panel-section">
-          <h3>实时病害告警</h3>
-          <div class="alert-list">
-            <div class="alert-card critical" onclick="showDefectModal()">
-              <div class="alert-icon">⚠️</div>
-              <div class="alert-content">
-                <div class="alert-title">2号索塔表面裂缝</div>
-                <div class="alert-desc">AI置信度 98% | 宽度 2.5mm</div>
+        <!-- Main Content Area -->
+        <main class="main-content">
+           <!-- Bottom Timeline -->
+           <div class="waypoint-timeline glass-panel">
+             <div class="timeline-header">
+               <span class="mission-time">已飞行: 05:14 (预计43个航点)</span>
+               <span class="mission-percent">95%</span>
+             </div>
+             <div class="timeline-track">
+               <div class="timeline-progress" style="width: 80%;"></div>
+               <div class="wp-node completed" style="left: 0%;"><span>起飞</span></div>
+               <div class="wp-node completed" style="left: 20%;"><span>航点36</span></div>
+               <div class="wp-node completed" style="left: 40%;"><span>航点37</span></div>
+               <div class="wp-node completed" style="left: 60%;"><span>航点38</span></div>
+               <div class="wp-node active" style="left: 80%;"><span>航点39</span></div>
+               <div class="wp-node pending" style="left: 100%;"><span>返航</span></div>
+             </div>
+           </div>
+        </main>
+
+        <!-- Right Sidebar: FPV & AI Feed -->
+        <aside class="sidebar-right glass-panel">
+          <div class="panel-section fpv-container">
+            <div class="fpv-header">
+              <h3>实时图传 (M350 RTK)</h3>
+              <button class="pip-btn" title="视口切换">🔄</button>
+            </div>
+            <div class="fpv-view">
+              <img src="/bridge-inspection-demo/fpv.png" alt="FPV View" class="fpv-image" />
+              <div class="fpv-overlay">
+                <div class="crosshair"></div>
+                <div class="fpv-data top-left">REC 00:12:45</div>
+                <div class="fpv-data bottom-right">Z: 145.2m</div>
+              </div>
+            </div>
+            <div class="telemetry-grid mt-2">
+              <div class="telemetry-item"><div class="label">高度</div><div class="value">145.2<span class="unit">m</span></div></div>
+              <div class="telemetry-item"><div class="label">距离</div><div class="value">5.1<span class="unit">m</span></div></div>
+              <div class="telemetry-item"><div class="label">电量</div><div class="value">68<span class="unit">%</span></div></div>
+              <div class="telemetry-item"><div class="label">信号</div><div class="value">4/4</div></div>
+            </div>
+          </div>
+
+          <div class="panel-section ai-feed-section">
+            <div class="ai-feed-header">
+              <h3>异常抓拍 (106)</h3>
+              <div class="ai-tags">
+                <span class="tag tag-red">裂缝</span>
+                <span class="tag tag-yellow">锈蚀</span>
+                <span class="tag tag-blue">抛洒物</span>
+              </div>
+            </div>
+            <div class="ai-feed-list">
+              <div class="ai-feed-card" onclick="showDefectModal()">
+                <img src="/bridge-inspection-demo/crack.png" class="ai-thumb" />
+                <div class="ai-feed-info">
+                  <div class="ai-feed-title">2号索塔表面裂缝</div>
+                  <div class="ai-feed-meta">2026-02-03 12:54:30</div>
+                </div>
+              </div>
+              <div class="ai-feed-card">
+                <img src="/bridge-inspection-demo/crack.png" class="ai-thumb" />
+                <div class="ai-feed-info">
+                  <div class="ai-feed-title">桥面边缘抛洒物</div>
+                  <div class="ai-feed-meta">2026-02-03 12:54:15</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <!-- New Views (Hidden by default) -->
+      <div id="view-command-center" class="view-container">
+        <div class="cc-map-container">
+          <div id="cesium-container" class="cc-map"></div>
+          <div class="cc-stats-overlay">
+            <div class="cc-stat-panel left-panel">
+              <div class="cc-card">
+                <div class="label">Total Inspections</div>
+                <div class="value">12,458</div>
+              </div>
+              <div class="cc-card">
+                <div class="label">Active Docks</div>
+                <div class="value">42</div>
+              </div>
+              <div class="cc-card">
+                <div class="label">Alerts (24h)</div>
+                <div class="value" style="color: #ef4444;">86</div>
+              </div>
+            </div>
+            <div></div>
+            <div class="cc-stat-panel right-panel">
+               <div class="cc-card">
+                <div class="label">Fleet Uptime</div>
+                <div class="value">99.8%</div>
+              </div>
+              <div class="cc-card">
+                <div class="label">Data Streamed</div>
+                <div class="value">4.2 TB</div>
               </div>
             </div>
           </div>
         </div>
-      </aside>
+      </div>
 
-      <!-- Right Panel: Telemetry & FPV -->
-      <aside class="right-panel glass-panel">
-        <div class="panel-section fpv-container">
-          <h3>实时图传 (模拟)</h3>
-          <div class="fpv-view">
-            <img src="/bridge-inspection-demo/fpv.png" alt="FPV View" class="fpv-image" />
-            <div class="fpv-overlay">
-              <div class="crosshair"></div>
-              <div class="fpv-data top-left">REC 00:12:45</div>
-              <div class="fpv-data bottom-right">Z: 145.2m</div>
+      <div id="view-resource-management" class="view-container">
+        <div class="resource-header">
+          <h2>资产设备全息档案</h2>
+        </div>
+        <div class="resource-grid">
+          <!-- Item 1 -->
+          <div class="resource-card">
+            <img src="/bridge-inspection-demo/fleet.png" class="rc-img" />
+            <div class="rc-info">
+              <div class="rc-title">M350 RTK <span class="rc-status">🟢 待机正常</span></div>
+              <div class="rc-meta">序列号: 3Q4DF2409X<br>飞行时长: 240H<br>电池循环: 12次</div>
+            </div>
+          </div>
+          <!-- Item 2 -->
+          <div class="resource-card">
+            <img src="/bridge-inspection-demo/dock.png" class="rc-img" />
+            <div class="rc-info">
+              <div class="rc-title">DJI Dock 2 (大桥北塔) <span class="rc-status">🟢 运行中</span></div>
+              <div class="rc-meta">序列号: DOCK-40291<br>网络: 5G (420Mbps)<br>内温: 22°C</div>
+            </div>
+          </div>
+          <!-- Item 3 -->
+          <div class="resource-card">
+            <img src="/bridge-inspection-demo/fleet.png" class="rc-img" />
+            <div class="rc-info">
+              <div class="rc-title">M30T <span class="rc-status" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;">🔴 保养中</span></div>
+              <div class="rc-meta">序列号: 8K9LM102XX<br>飞行时长: 1200H<br>电池循环: 84次</div>
+            </div>
+          </div>
+          <!-- Item 4 -->
+          <div class="resource-card">
+            <img src="/bridge-inspection-demo/dock.png" class="rc-img" />
+            <div class="rc-info">
+              <div class="rc-title">DJI Dock 2 (大桥南塔) <span class="rc-status">🟢 待命</span></div>
+              <div class="rc-meta">序列号: DOCK-40292<br>网络: 5G (390Mbps)<br>内温: 20°C</div>
             </div>
           </div>
         </div>
-
-        <div class="panel-section telemetry-grid">
-          <div class="telemetry-item">
-            <div class="label">飞行高度</div>
-            <div class="value">145.2 <span class="unit">m</span></div>
-          </div>
-          <div class="telemetry-item">
-            <div class="label">相对距离</div>
-            <div class="value">5.1 <span class="unit">m</span></div>
-          </div>
-          <div class="telemetry-item">
-            <div class="label">电池电量</div>
-            <div class="value">68 <span class="unit">%</span></div>
-          </div>
-          <div class="telemetry-item">
-            <div class="label">图传信号</div>
-            <div class="value">4/4 <span class="unit">bars</span></div>
-          </div>
-        </div>
-      </aside>
+      </div>
 
       <!-- Floating Drone Widget -->
       <div class="drone-widget">
