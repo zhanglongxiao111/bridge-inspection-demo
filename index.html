@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>桥梁智慧巡检平台 Demo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <!-- Background 3D Canvas -->
+    <div id="canvas-container"></div>
+
+    <!-- UI Overlay -->
+    <div id="ui-layer">
+      <!-- Top Bar -->
+      <header class="top-bar glass-panel">
+        <div class="logo">🌉 DJI Cloud API - 桥梁巡检平台</div>
+        <div class="header-right">
+          <div class="status-indicators">
+            <span class="status online">● 设备在线 (M350 RTK)</span>
+            <span class="status rtk">● RTK FIX</span>
+          </div>
+          <button id="theme-toggle" class="theme-btn" title="切换主题">
+            <!-- Sun Icon (for dark mode to switch to light) -->
+            <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+            <!-- Moon Icon (for light mode to switch to dark) -->
+            <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Left Panel: Task & Assets -->
+      <aside class="left-panel glass-panel">
+        <div class="panel-section">
+          <h3>航线任务</h3>
+          <div class="task-card active">
+            <div class="task-header">
+              <span>索塔精细化巡检</span>
+              <span class="badge">执行中</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" style="width: 45%;"></div>
+            </div>
+            <div class="task-meta">进度: 45% | 剩余: 12分30秒</div>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <h3>桥梁构件节点</h3>
+          <ul class="node-list">
+            <li class="node-item" data-target="pylon-1">📍 1号主索塔</li>
+            <li class="node-item" data-target="pylon-2">📍 2号主索塔</li>
+            <li class="node-item" data-target="cable-left">🕸 左侧斜拉索群</li>
+            <li class="node-item" data-target="pier-3">🏛 3号承台及墩身</li>
+          </ul>
+        </div>
+        
+        <div class="panel-section">
+          <h3>实时病害告警</h3>
+          <div class="alert-list">
+            <div class="alert-card critical" onclick="showDefectModal()">
+              <div class="alert-icon">⚠️</div>
+              <div class="alert-content">
+                <div class="alert-title">2号索塔表面裂缝</div>
+                <div class="alert-desc">AI置信度 98% | 宽度 2.5mm</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Right Panel: Telemetry & FPV -->
+      <aside class="right-panel glass-panel">
+        <div class="panel-section fpv-container">
+          <h3>实时图传 (模拟)</h3>
+          <div class="fpv-view">
+            <img src="/fpv.png" alt="FPV View" class="fpv-image" />
+            <div class="fpv-overlay">
+              <div class="crosshair"></div>
+              <div class="fpv-data top-left">REC 00:12:45</div>
+              <div class="fpv-data bottom-right">Z: 145.2m</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-section telemetry-grid">
+          <div class="telemetry-item">
+            <div class="label">飞行高度</div>
+            <div class="value">145.2 <span class="unit">m</span></div>
+          </div>
+          <div class="telemetry-item">
+            <div class="label">相对距离</div>
+            <div class="value">5.1 <span class="unit">m</span></div>
+          </div>
+          <div class="telemetry-item">
+            <div class="label">电池电量</div>
+            <div class="value">68 <span class="unit">%</span></div>
+          </div>
+          <div class="telemetry-item">
+            <div class="label">图传信号</div>
+            <div class="value">4/4 <span class="unit">bars</span></div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Floating Drone Widget -->
+      <div class="drone-widget">
+        <div class="drone-info">
+          <div class="drone-name">M350 RTK</div>
+          <div class="drone-status">● 巡航中 (Auto)</div>
+        </div>
+        <img src="/drone.png" alt="Drone Model" class="drone-img" />
+      </div>
+
+      <!-- Defect Modal (Hidden by default) -->
+      <div id="defect-modal" class="modal glass-panel hidden">
+        <div class="modal-header">
+          <h3>病害详情确认</h3>
+          <button class="close-btn" onclick="hideDefectModal()">×</button>
+        </div>
+        <div class="modal-body">
+          <img src="/crack.png" alt="Crack Defect" class="defect-image" />
+          <div class="defect-info">
+            <p><strong>位置坐标:</strong> [113.1234, 23.5678, 142.5]</p>
+            <p><strong>AI 分析结果:</strong> 混凝土深度裂缝，建议尽快进行人工复核与灌浆修复。</p>
+          </div>
+          <button class="action-btn">生成维修工单</button>
+        </div>
+      </div>
+    </div>
+    
+    <script type="module" src="/main.js"></script>
+    <script>
+      function showDefectModal() {
+        document.getElementById('defect-modal').classList.remove('hidden');
+      }
+      function hideDefectModal() {
+        document.getElementById('defect-modal').classList.add('hidden');
+      }
+    </script>
+  </body>
+</html>
