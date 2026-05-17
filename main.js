@@ -14,19 +14,19 @@ themeBtn.addEventListener('click', () => {
         document.documentElement.setAttribute('data-theme', 'light');
         sunIcon.style.display = 'none';
         moonIcon.style.display = 'block';
-        updateSceneTheme(0xe2e8f0, 0xcbd5e1, 0x94a3b8, 0x3b82f6, 0x0ea5e9);
+        updateSceneTheme(0xe5e5e5, 0xcbd5e1, 0xa1a1aa, 0xb8860b, 0xd4d4d8);
     } else {
         document.documentElement.removeAttribute('data-theme');
         sunIcon.style.display = 'block';
         moonIcon.style.display = 'none';
-        updateSceneTheme(0x0b0f19, 0x1e293b, 0x334155, 0x0ea5e9, 0x064e3b);
+        updateSceneTheme(0x080808, 0x18181b, 0x27272a, 0xd4af37, 0x0a0a0a);
     }
 });
 
 // --- Scene Setup ---
 const container = document.getElementById('canvas-container');
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x0b0f19, 0.0015);
+scene.fog = new THREE.FogExp2(0x080808, 0.0015);
 
 const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 3000);
 camera.position.set(250, 150, 350);
@@ -34,7 +34,7 @@ camera.position.set(250, 150, 350);
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setClearColor(0x0b0f19, 1);
+renderer.setClearColor(0x080808, 1);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 container.appendChild(renderer.domElement);
@@ -65,13 +65,13 @@ const droneLight = new THREE.PointLight(0xef4444, 2.5, 150);
 scene.add(droneLight);
 
 // --- Materials ---
-const concreteMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.9, metalness: 0.1 });
-const roadMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.95 });
-const cableMat = new THREE.LineBasicMaterial({ color: 0x94a3b8, transparent: true, opacity: 0.8 });
-const highlightMat = new THREE.MeshStandardMaterial({ color: 0x0ea5e9, emissive: 0x0ea5e9, emissiveIntensity: 0.4 });
-const metalMat = new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.4, metalness: 0.8 });
-const terrainMat = new THREE.MeshStandardMaterial({ color: 0x064e3b, roughness: 1.0, flatShading: true });
-const waterMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, transparent: true, opacity: 0.85, roughness: 0.1, metalness: 0.9, flatShading: true });
+const concreteMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.9, metalness: 0.1 });
+const roadMat = new THREE.MeshStandardMaterial({ color: 0x0f0f11, roughness: 0.95 });
+const cableMat = new THREE.LineBasicMaterial({ color: 0x52525b, transparent: true, opacity: 0.8 });
+const highlightMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, emissive: 0xd4af37, emissiveIntensity: 0.4 });
+const metalMat = new THREE.MeshStandardMaterial({ color: 0x3f3f46, roughness: 0.4, metalness: 0.8 });
+const terrainMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 1.0, flatShading: true });
+const waterMat = new THREE.MeshStandardMaterial({ color: 0x1f1f22, transparent: true, opacity: 0.9, roughness: 0.1, metalness: 0.9, flatShading: true });
 
 // --- Environment: Terrain & River ---
 const terrainGroup = new THREE.Group();
@@ -445,3 +445,108 @@ document.querySelectorAll('.node-item').forEach(item => {
         }
     });
 });
+
+// --- Navigation Routing ---
+document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+        e.preventDefault();
+        const targetId = item.getAttribute('data-target');
+        if(!targetId) return;
+        
+        document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+        item.classList.add('active');
+        
+        document.querySelectorAll('.view-container').forEach(view => view.classList.remove('active'));
+        const targetView = document.getElementById(targetId);
+        if(targetView) targetView.classList.add('active');
+        
+        // Hide 3D Canvas if not in flight control (optional, for performance and aesthetics)
+        if(targetId === 'view-command-center' && window.cesiumViewer) { 
+            window.cesiumViewer.resize();
+        }
+        if(targetId !== 'view-flight-control') {
+            document.getElementById('canvas-container').style.opacity = '0';
+            document.getElementById('canvas-container').style.pointerEvents = 'none';
+        } else {
+            document.getElementById('canvas-container').style.opacity = '1';
+            document.getElementById('canvas-container').style.pointerEvents = 'auto';
+        }
+    });
+});
+
+
+// --- CesiumJS Setup ---
+const cesiumContainer = document.getElementById('cesium-container');
+if (cesiumContainer && typeof Cesium !== 'undefined') {
+    Cesium.Ion.defaultAccessToken = '';
+    
+    const viewer = new Cesium.Viewer('cesium-container', {
+        timeline: false,
+        animation: false,
+        geocoder: false,
+        homeButton: false,
+        baseLayerPicker: false,
+        navigationHelpButton: false,
+        sceneModePicker: false,
+        fullscreenButton: false,
+        infoBox: false,
+        selectionIndicator: false,
+        baseLayer: false
+    });
+
+    viewer.scene.skyBox.show = false;
+    viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#080808');
+
+    const googleApiKey = import.meta.env.VITE_GOOGLE_MAP_TILES_API_KEY;
+    
+    async function loadGoogleTiles() {
+        try {
+            const tileset = await Cesium.createGooglePhotorealistic3DTileset(googleApiKey);
+            viewer.scene.primitives.add(tileset);
+            
+            tileset.colorBlendMode = Cesium.Cesium3DTileColorBlendMode.MIX;
+            tileset.colorBlendAmount = 0.5;
+            tileset.style = new Cesium.Cesium3DTileStyle({
+                color: "color('#444444')"
+            });
+        } catch (error) {
+            console.error('Error loading Google 3D Tiles:', error);
+        }
+    }
+    
+    if (googleApiKey) {
+        loadGoogleTiles();
+    }
+
+    viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(116.391, 39.904, 15000000),
+        duration: 0
+    });
+
+    const arcs = [
+      { start: [116.4074, 39.9042], end: [-74.0060, 40.7128] },
+      { start: [-0.1278, 51.5074], end: [-74.0060, 40.7128] },
+      { start: [116.4074, 39.9042], end: [139.6503, 35.6762] }
+    ];
+
+    arcs.forEach(arc => {
+        viewer.entities.add({
+            polyline: {
+                positions: Cesium.Cartesian3.fromDegreesArray([
+                    arc.start[0], arc.start[1], 
+                    arc.end[0], arc.end[1]
+                ]),
+                width: 3,
+                arcType: Cesium.ArcType.GEODESIC,
+                material: new Cesium.PolylineGlowMaterialProperty({
+                    glowPower: 0.3,
+                    color: Cesium.Color.fromCssColorString('#d4af37')
+                })
+            }
+        });
+    });
+
+    window.cesiumViewer = viewer;
+}
+
+
