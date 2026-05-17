@@ -118,8 +118,12 @@
 
             <!-- FPV Controls & Instructions -->
             <div class="fpv-controls-overlay">
-                <button id="btn-toggle-fpv" class="action-btn primary-btn" style="pointer-events: auto;">切换第一人称 (FPV)</button>
-                <div id="fpv-instructions" class="glass-panel hidden" style="margin-top: 10px; padding: 15px; font-size: 0.85rem; pointer-events: none;">
+                <div style="display: flex; gap: 10px; margin-bottom: 15px; pointer-events: auto;">
+                    <button id="btn-start-mission" class="action-btn primary-btn">✈️ 起飞并执行任务</button>
+                    <button id="btn-resume-mission" class="action-btn danger-btn hidden">🔄 恢复自动巡检</button>
+                    <button id="btn-toggle-fpv" class="action-btn secondary-btn">💻 切换第一人称 (FPV)</button>
+                </div>
+                <div id="fpv-instructions" class="glass-panel hidden" style="padding: 15px; font-size: 0.85rem; pointer-events: none;">
                     <strong>[飞行控制]</strong><br/>
                     W/S: 前进/后退<br/>
                     A/D: 左右平移<br/>

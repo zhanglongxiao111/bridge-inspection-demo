@@ -274,104 +274,6 @@ for(let i=0; i<30; i++) {
 }
 
 // --- Procedural Drone Model ---
-function buildDrone() {
-    const dGrp = new THREE.Group();
-    const dMat = new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.8, roughness: 0.2 });
-    const accMat = new THREE.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 0.5 });
-    
-    const body = new THREE.Mesh(new THREE.BoxGeometry(3.5, 1.5, 3.5), dMat);
-    body.castShadow = true;
-    dGrp.add(body);
-    
-    const propMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.4 });
-    const props = [];
-    const offsets = [[2.5,2.5], [2.5,-2.5], [-2.5,2.5], [-2.5,-2.5]];
-    
-    offsets.forEach(p => {
-        const arm = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.6, 4), dMat);
-        arm.position.set(p[0]/2, 0, p[1]/2);
-        arm.lookAt(new THREE.Vector3(p[0], 0, p[1]));
-        dGrp.add(arm);
-        
-        const prop = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.1, 16), propMat);
-        prop.position.set(p[0], 0.5, p[1]);
-        dGrp.add(prop);
-        props.push(prop);
-    });
-    
-    const cam = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 16), accMat);
-    cam.position.set(0, -1.2, 0);
-    dGrp.add(cam);
-    return { model: dGrp, props };
-}
-
-const droneData = buildDrone();
-scene.add(droneData.model);
-
-// --- Premium Trajectory (Flowing Energy Dash) ---
-const pathPoints = [
-    new THREE.Vector3(-350, 100, 60),
-    new THREE.Vector3(-250, 200, 40),
-    new THREE.Vector3(-150, 90, 25),
-    new THREE.Vector3(0, 75, 60),
-    new THREE.Vector3(150, 90, 25),
-    new THREE.Vector3(250, 200, 40),
-    new THREE.Vector3(350, 100, 60)
-];
-const curve = new THREE.CatmullRomCurve3(pathPoints);
-
-function createFlowTexture() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 64;
-    const ctx = canvas.getContext('2d');
-    
-    const gradient = ctx.createLinearGradient(0, 0, 512, 0);
-    gradient.addColorStop(0, 'rgba(16, 185, 129, 0)');
-    gradient.addColorStop(0.3, 'rgba(16, 185, 129, 0.4)');
-    gradient.addColorStop(0.8, 'rgba(16, 185, 129, 1)');
-    gradient.addColorStop(0.95, 'rgba(255, 255, 255, 1)');
-    gradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
-    
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, 512, 64);
-    
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(20, 1);
-    return texture;
-}
-
-const flowTexture = createFlowTexture();
-const tubeGeom = new THREE.TubeGeometry(curve, 300, 0.8, 8, false);
-const tubeMat = new THREE.MeshBasicMaterial({ 
-    color: 0xffffff,
-    map: flowTexture,
-    alphaMap: flowTexture,
-    transparent: true, 
-    opacity: 0.9,
-    blending: THREE.AdditiveBlending,
-    depthWrite: false
-});
-const flightPath = new THREE.Mesh(tubeGeom, tubeMat);
-scene.add(flightPath);
-
-// --- Theme Update Function ---
-function updateSceneTheme(bgColor, meshColor, gridColor, lightColor, landColor) {
-    renderer.setClearColor(bgColor, 1);
-    scene.fog.color.setHex(bgColor);
-    concreteMat.color.setHex(meshColor);
-    terrainMat.color.setHex(landColor);
-    
-    scene.remove(gridHelper);
-    gridHelper = new THREE.GridHelper(3000, 150, lightColor, gridColor);
-    gridHelper.position.y = -14.5;
-    gridHelper.material.transparent = true;
-    gridHelper.material.opacity = 0.2;
-    scene.add(gridHelper);
-}
-
 // --- Animation Loop ---
 let fraction = 0;
 const clock = new THREE.Clock();
@@ -383,6 +285,7 @@ function animate() {
     const dt = clock.getDelta();
     if (!myDrone.isFPV) controls.update();
     myDrone.update(dt);
+    if(window.updatePathVisualization) window.updatePathVisualization();
     
     // Animate cars
     cars.forEach(car => {
@@ -402,26 +305,7 @@ function animate() {
     water.geometry.attributes.position.needsUpdate = true;
     water.geometry.computeVertexNormals();
 
-    // Animate Drone
-    fraction += 0.0005;
-    if (fraction > 1) fraction = 0;
     
-    const position = curve.getPoint(fraction);
-    droneData.model.position.copy(position);
-    
-    const lookAtPos = curve.getPoint(Math.min(fraction + 0.01, 1));
-    droneData.model.lookAt(lookAtPos);
-    
-    droneData.props.forEach((prop, idx) => {
-        prop.rotation.y += (idx % 2 === 0 ? 0.4 : -0.4);
-    });
-    
-    droneLight.position.copy(position);
-    droneLight.position.y -= 3;
-    
-    // Flowing energy & breathing effect
-    flowTexture.offset.x -= 0.015;
-    tubeMat.opacity = 0.6 + Math.sin(time * 3) * 0.4;
     
     renderer.render(scene, camera);
 }

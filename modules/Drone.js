@@ -9,82 +9,77 @@ export class Drone {
         this.isFPV = false;
         this.speed = 100.0;
         this.rotSpeed = 1.5;
-        this.targetPosition = null;
+        
+        this.waypoints = [
+            new THREE.Vector3(-250, 110, 140),
+            new THREE.Vector3(0, 45, 160),
+            new THREE.Vector3(250, 110, 140)
+        ];
+        this.flightState = 'IDLE'; // IDLE, AUTO_NAV, PHOTOGRAPHING, MANUAL
+        this.photoTimer = 0;
 
-        // Key states
         this.keys = { w: false, a: false, s: false, d: false, space: false, shift: false, q: false, e: false };
 
         this.mesh = this.createModel();
         
-        // Initial takeoff position
-        this.position = new THREE.Vector3(-100, 100, 100);
+        // Initial position (on the ground/bridge deck)
+        this.position = new THREE.Vector3(0, 52.5, 30);
         this.mesh.position.copy(this.position);
         this.scene.add(this.mesh);
 
         this._initControls();
+        
+        // Expose a callback for UI updates
+        this.onStateChange = null;
     }
 
     createModel() {
         const group = new THREE.Group();
         
-        // Drone Body (Carbon Fiber Look)
         const bodyGeom = new THREE.BoxGeometry(4, 1.5, 5);
         const mat = new THREE.MeshStandardMaterial({ 
-            color: 0x1a1a1a, 
-            roughness: 0.3, 
-            metalness: 0.8 
+            color: 0x1a1a1a, roughness: 0.3, metalness: 0.8 
         });
         const body = new THREE.Mesh(bodyGeom, mat);
         group.add(body);
 
-        // Arms & Rotors
         this.rotors = [];
-        const armDistX = 3.5;
-        const armDistZ = 3.5;
+        const armDistX = 3.5, armDistZ = 3.5;
         const positions = [
             [armDistX, armDistZ], [-armDistX, armDistZ], 
             [armDistX, -armDistZ], [-armDistX, -armDistZ]
         ];
         
         positions.forEach(pos => {
-            // Arm
             const armGeom = new THREE.CylinderGeometry(0.3, 0.3, 5);
             armGeom.rotateX(Math.PI / 2);
             const arm = new THREE.Mesh(armGeom, mat);
-            // Angle arms towards corners
             arm.position.set(pos[0]/2, 0, pos[1]/2);
             arm.lookAt(pos[0], 0, pos[1]);
             group.add(arm);
 
-            // Rotor Disc
             const propGeom = new THREE.CylinderGeometry(2.5, 2.5, 0.1, 16);
-            const propMat = new THREE.MeshStandardMaterial({ 
-                color: 0x222222, 
-                transparent: true, 
-                opacity: 0.4 
-            });
+            const propMat = new THREE.MeshStandardMaterial({ color: 0x222222, transparent: true, opacity: 0.4 });
             const prop = new THREE.Mesh(propGeom, propMat);
             prop.position.set(pos[0], 0.5, pos[1]);
             group.add(prop);
             this.rotors.push(prop);
         });
 
-        // Searchlight (Amber)
-        const spotLight = new THREE.SpotLight(0xd4af37, 200, 300, Math.PI / 8, 0.5, 1);
-        spotLight.position.set(0, -1, 0);
+        // Spotlight
+        this.spotLight = new THREE.SpotLight(0xd4af37, 200, 300, Math.PI / 8, 0.5, 1);
+        this.spotLight.position.set(0, -1, 0);
         
-        const targetObj = new THREE.Object3D();
-        targetObj.position.set(0, -100, 0);
-        group.add(targetObj);
-        spotLight.target = targetObj;
-        
-        group.add(spotLight);
+        this.targetObj = new THREE.Object3D();
+        this.targetObj.position.set(0, -100, 0);
+        group.add(this.targetObj);
+        this.spotLight.target = this.targetObj;
+        group.add(this.spotLight);
 
-        // Indicator Light (Red tail)
-        const lightMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-        const tailLight = new THREE.Mesh(new THREE.SphereGeometry(0.3), lightMat);
-        tailLight.position.set(0, 0, 2.5);
-        group.add(tailLight);
+        // Flash Light for photographing
+        this.flashLight = new THREE.PointLight(0xffffff, 0, 100);
+        this.flashLight.position.set(0, -2, 0);
+        group.add(this.flashLight);
 
         return group;
     }
@@ -94,7 +89,14 @@ export class Drone {
             const key = e.key.toLowerCase();
             if(key === ' ') { this.keys.space = true; e.preventDefault(); }
             if(key === 'shift') { this.keys.shift = true; e.preventDefault(); }
-            if(this.keys.hasOwnProperty(key)) this.keys[key] = true;
+            if(this.keys.hasOwnProperty(key)) {
+                this.keys[key] = true;
+                // Interrupt auto-nav if in FPV
+                if (this.isFPV && this.flightState === 'AUTO_NAV') {
+                    this.flightState = 'MANUAL';
+                    if(this.onStateChange) this.onStateChange('MANUAL');
+                }
+            }
         });
         window.addEventListener('keyup', (e) => {
             const key = e.key.toLowerCase();
@@ -106,79 +108,118 @@ export class Drone {
 
     toggleView() {
         this.isFPV = !this.isFPV;
-        if(this.isFPV) {
-            this.controls.enabled = false;
-            // Snap camera to front of drone
-        } else {
-            this.controls.enabled = true;
-            // OrbitControls will target the drone in update()
-        }
+        this.controls.enabled = !this.isFPV;
         return this.isFPV;
     }
 
-    flyTo(targetVec3) {
-        if (this.isFPV) return; // Only allow auto-nav in TPV
-        this.targetPosition = targetVec3.clone();
-        this.targetPosition.y = Math.max(this.targetPosition.y + 40, 80); // Hover 40m above target
+    addWaypoint(vec3) {
+        this.waypoints.push(vec3.clone());
+        if (this.flightState === 'IDLE') {
+            this.flightState = 'AUTO_NAV';
+            if(this.onStateChange) this.onStateChange('AUTO_NAV');
+        }
+    }
+    
+    removeLastWaypoint() {
+        if(this.waypoints.length > 0) {
+            this.waypoints.pop();
+        }
+    }
+
+    resumeMission() {
+        if(this.waypoints.length > 0) {
+            this.flightState = 'AUTO_NAV';
+            if(this.onStateChange) this.onStateChange('AUTO_NAV');
+        }
+    }
+
+    startMission() {
+        if(this.waypoints.length > 0 && this.flightState === 'IDLE') {
+            this.flightState = 'AUTO_NAV';
+            if(this.onStateChange) this.onStateChange('AUTO_NAV');
+        }
     }
 
     update(delta) {
-        if (delta > 0.1) delta = 0.1; // Cap delta to prevent huge jumps
+        if (delta > 0.1) delta = 0.1;
 
         // Spin rotors
-        this.rotors.forEach((r, i) => {
-            // Alternate rotation direction
-            r.rotation.y += (i % 2 === 0 ? 20 : -20) * delta;
-        });
+        const isFlying = this.position.y > 53 || this.flightState !== 'IDLE';
+        if (isFlying) {
+            this.rotors.forEach((r, i) => r.rotation.y += (i % 2 === 0 ? 20 : -20) * delta);
+        }
 
         if (this.isFPV) {
-            // Manual FPV Physics
-            const moveAmt = this.speed * delta;
-            const rotAmt = this.rotSpeed * delta;
+            if (this.flightState === 'MANUAL') {
+                const moveAmt = this.speed * delta;
+                const rotAmt = this.rotSpeed * delta;
+                
+                if(this.keys.w) this.mesh.translateZ(-moveAmt);
+                if(this.keys.s) this.mesh.translateZ(moveAmt);
+                if(this.keys.a) this.mesh.translateX(-moveAmt);
+                if(this.keys.d) this.mesh.translateX(moveAmt);
+                if(this.keys.space) this.mesh.translateY(moveAmt);
+                if(this.keys.shift) this.mesh.translateY(-moveAmt);
+                if(this.keys.q) this.mesh.rotateY(rotAmt);
+                if(this.keys.e) this.mesh.rotateY(-rotAmt);
+            }
             
-            if(this.keys.w) this.mesh.translateZ(-moveAmt);
-            if(this.keys.s) this.mesh.translateZ(moveAmt);
-            if(this.keys.a) this.mesh.translateX(-moveAmt);
-            if(this.keys.d) this.mesh.translateX(moveAmt);
-            if(this.keys.space) this.mesh.translateY(moveAmt);
-            if(this.keys.shift) this.mesh.translateY(-moveAmt);
-            if(this.keys.q) this.mesh.rotateY(rotAmt);
-            if(this.keys.e) this.mesh.rotateY(-rotAmt);
-
-            // Update Camera to stick to drone's nose
-            const offset = new THREE.Vector3(0, 0.5, -2); // Front camera
+            const offset = new THREE.Vector3(0, 0.5, -2);
             offset.applyQuaternion(this.mesh.quaternion);
             this.camera.position.copy(this.mesh.position).add(offset);
             
-            // Camera looks forward along drone's local Z
             const lookAt = new THREE.Vector3(0, 0, -100);
             lookAt.applyQuaternion(this.mesh.quaternion);
             this.camera.lookAt(this.mesh.position.clone().add(lookAt));
-            
         } else {
-            // Auto Nav (TPV)
-            if (this.targetPosition) {
-                // Lerp position
-                this.mesh.position.lerp(this.targetPosition, 1.5 * delta);
-                
-                // Look towards target horizontally
-                const targetPos2D = new THREE.Vector3(this.targetPosition.x, this.mesh.position.y, this.targetPosition.z);
-                
-                // Only look at if we are far enough (prevent spinning at destination)
-                if (this.mesh.position.distanceTo(targetPos2D) > 2) {
-                    const targetQuat = new THREE.Quaternion().setFromRotationMatrix(
-                        new THREE.Matrix4().lookAt(this.mesh.position, targetPos2D, new THREE.Vector3(0,1,0))
-                    );
-                    this.mesh.quaternion.slerp(targetQuat, 2 * delta);
-                }
+            this.controls.target.lerp(this.mesh.position, 5 * delta);
+        }
+        
+        // Auto Nav Logic (runs regardless of FPV/TPV, unless interrupted)
+        if (this.flightState === 'AUTO_NAV' && this.waypoints.length > 0) {
+            const target = this.waypoints[0].clone();
+            // Hover 1m away, slightly above
+            const hoverPos = target.clone().add(new THREE.Vector3(15, 10, 15));
+            
+            this.mesh.position.lerp(hoverPos, 1.0 * delta);
+            
+            const targetPos2D = new THREE.Vector3(target.x, this.mesh.position.y, target.z);
+            if (this.mesh.position.distanceTo(hoverPos) > 5) {
+                const targetQuat = new THREE.Quaternion().setFromRotationMatrix(
+                    new THREE.Matrix4().lookAt(this.mesh.position, targetPos2D, new THREE.Vector3(0,1,0))
+                );
+                this.mesh.quaternion.slerp(targetQuat, 2 * delta);
+                // Aim spotlight at target
+                this.targetObj.position.copy(this.mesh.worldToLocal(target.clone()));
+            }
 
-                if (this.mesh.position.distanceTo(this.targetPosition) < 2) {
-                    this.targetPosition = null; // Reached
-                }
+            if (this.mesh.position.distanceTo(hoverPos) < 2) {
+                // Reached waypoint
+                this.flightState = 'PHOTOGRAPHING';
+                this.photoTimer = 1.5;
+                if(this.onStateChange) this.onStateChange('PHOTOGRAPHING');
+            }
+        }
+        
+        if (this.flightState === 'PHOTOGRAPHING') {
+            this.photoTimer -= delta;
+            // Flash effect
+            if (this.photoTimer > 1.2 && this.photoTimer < 1.4) {
+                this.flashLight.intensity = 1000;
+            } else {
+                this.flashLight.intensity = 0;
             }
             
-            // TPV Camera Logic: OrbitControls target follows drone smoothly
-            this.controls.target.lerp(this.mesh.position, 5 * delta);
+            if (this.photoTimer <= 0) {
+                this.waypoints.shift(); // Remove the completed waypoint
+                if (this.waypoints.length > 0) {
+                    this.flightState = 'AUTO_NAV';
+                    if(this.onStateChange) this.onStateChange('AUTO_NAV');
+                } else {
+                    this.flightState = 'IDLE';
+                    if(this.onStateChange) this.onStateChange('IDLE');
+                }
+            }
         }
     }
 }

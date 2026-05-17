@@ -515,3 +515,7 @@ body {
 .danger-btn { background: rgba(239, 68, 68, 0.8) !important; color: white; border: 1px solid #ef4444 !important; box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
 .danger-btn:hover { background: rgba(239, 68, 68, 1) !important; }
 
+
+.secondary-btn { background: rgba(50, 50, 50, 0.8) !important; color: white; border: 1px solid #666; }
+.secondary-btn:hover { background: rgba(80, 80, 80, 1) !important; }
+
