@@ -16,11 +16,15 @@ themeBtn.addEventListener('click', () => {
         sunIcon.style.display = 'none';
         moonIcon.style.display = 'block';
         updateSceneTheme(0xe5e5e5, 0xcbd5e1, 0xa1a1aa, 0xb8860b, 0xd4d4d8);
+        if(window.ambientLight) window.ambientLight.intensity = 1.0;
+        if(window.directionalLight) window.directionalLight.intensity = 1.2;
     } else {
         document.documentElement.removeAttribute('data-theme');
         sunIcon.style.display = 'block';
         moonIcon.style.display = 'none';
         updateSceneTheme(0x080808, 0x18181b, 0x27272a, 0xd4af37, 0x0a0a0a);
+        if(window.ambientLight) window.ambientLight.intensity = 0.4;
+        if(window.directionalLight) window.directionalLight.intensity = 0.8;
     }
 });
 
@@ -286,6 +290,14 @@ function updateSceneTheme(bgColor, meshColor, gridColor, lightColor, landColor) 
     gridHelper.material.transparent = true;
     gridHelper.material.opacity = 0.2;
     scene.add(gridHelper);
+    
+    if (bgColor === 0xe5e5e5) {
+        ambientLight.intensity = 1.0;
+        directionalLight.intensity = 1.2;
+    } else {
+        ambientLight.intensity = 0.6;
+        directionalLight.intensity = 0.8;
+    }
 }
 
 // --- Animation Loop ---
@@ -412,10 +424,12 @@ if(btnFpv) {
     btnFpv.addEventListener('click', () => {
         const isFpv = myDrone.toggleView();
         if(isFpv) {
+            document.body.classList.add('fpv-mode');
             btnFpv.textContent = "💻 退出 FPV";
             btnFpv.classList.replace('secondary-btn', 'danger-btn');
             fpvInstructions.classList.remove('hidden');
         } else {
+            document.body.classList.remove('fpv-mode');
             btnFpv.textContent = "💻 切换第一人称 (FPV)";
             btnFpv.classList.replace('danger-btn', 'secondary-btn');
             fpvInstructions.classList.add('hidden');
