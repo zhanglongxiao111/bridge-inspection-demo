@@ -23,7 +23,7 @@ export class Drone {
         this.mesh = this.createModel();
         
         // Initial position (on the ground/bridge deck)
-        this.position = new THREE.Vector3(0, 52.5, 30);
+        this.position = new THREE.Vector3(0, -10, 150);
         this.mesh.position.copy(this.position);
         this.scene.add(this.mesh);
 
@@ -144,7 +144,7 @@ export class Drone {
         if (delta > 0.1) delta = 0.1;
 
         // Spin rotors
-        const isFlying = this.position.y > 53 || this.flightState !== 'IDLE';
+        const isFlying = this.position.y > -8 || this.flightState !== 'IDLE';
         if (isFlying) {
             this.rotors.forEach((r, i) => r.rotation.y += (i % 2 === 0 ? 20 : -20) * delta);
         }

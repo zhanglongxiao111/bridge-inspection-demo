@@ -299,7 +299,8 @@ function animate() {
     const dt = clock.getDelta();
     if (!myDrone.isFPV) controls.update();
     myDrone.update(dt);
-    if(window.updatePathVisualization) window.updatePathVisualization();
+    
+    
     
     // Animate cars
     cars.forEach(car => {
@@ -332,7 +333,7 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// --- UI Interaction ---
+// --- UI Interaction & Path Visualization ---
 const targetMap = {
     'pylon-1': new THREE.Vector3(-250, 110, 140),
     'pylon-2': new THREE.Vector3(250, 110, 140),
@@ -340,15 +341,69 @@ const targetMap = {
     'pier-3': new THREE.Vector3(0, 45, 160)
 };
 
+const pathMaterial = new THREE.LineBasicMaterial({ color: 0xd4af37, opacity: 0.8, transparent: true });
+let pathLine = null;
+const waypointMarkers = [];
+
+window.updatePathVisualization = function() {
+    if(pathLine) {
+        scene.remove(pathLine);
+        pathLine.geometry.dispose();
+    }
+    waypointMarkers.forEach(m => scene.remove(m));
+    waypointMarkers.length = 0;
+    
+    if(myDrone.waypoints.length > 0) {
+        const points = [myDrone.mesh.position.clone(), ...myDrone.waypoints];
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        pathLine = new THREE.Line(geometry, pathMaterial);
+        scene.add(pathLine);
+        
+        myDrone.waypoints.forEach((wp, idx) => {
+            const marker = new THREE.Mesh(
+                new THREE.SphereGeometry(1.5),
+                new THREE.MeshBasicMaterial({ color: idx === 0 ? 0xff0000 : 0xd4af37 })
+            );
+            marker.position.copy(wp);
+            scene.add(marker);
+            waypointMarkers.push(marker);
+        });
+    }
+};
+setTimeout(window.updatePathVisualization, 500);
+
 document.querySelectorAll('.node-item').forEach(item => {
     item.addEventListener('click', (e) => {
         const targetId = e.target.getAttribute('data-target');
         if(targetMap[targetId]) {
-            camera.position.lerp(targetMap[targetId], 1);
-            controls.target.set(targetMap[targetId].x, targetMap[targetId].y - 30, 0);
+            myDrone.addWaypoint(targetMap[targetId]);
+            window.updatePathVisualization();
         }
     });
 });
+
+myDrone.onStateChange = (state) => {
+    const btnResume = document.getElementById('btn-resume-mission');
+    const btnStart = document.getElementById('btn-start-mission');
+    if(state === 'MANUAL' && myDrone.waypoints.length > 0) {
+        btnResume.classList.remove('hidden');
+    } else {
+        btnResume.classList.add('hidden');
+    }
+    
+    if(state !== 'IDLE') {
+        btnStart.classList.add('hidden');
+    } else if (myDrone.waypoints.length > 0) {
+        btnStart.classList.remove('hidden');
+    }
+    window.updatePathVisualization();
+};
+
+const btnStart = document.getElementById('btn-start-mission');
+if(btnStart) btnStart.addEventListener('click', () => myDrone.startMission());
+
+const btnResume = document.getElementById('btn-resume-mission');
+if(btnResume) btnResume.addEventListener('click', () => myDrone.resumeMission());
 
 // FPV Toggle Button
 const btnFpv = document.getElementById('btn-toggle-fpv');
@@ -357,12 +412,12 @@ if(btnFpv) {
     btnFpv.addEventListener('click', () => {
         const isFpv = myDrone.toggleView();
         if(isFpv) {
-            btnFpv.textContent = "退出 FPV (返回上帝视角)";
-            btnFpv.classList.replace('primary-btn', 'danger-btn');
+            btnFpv.textContent = "💻 退出 FPV";
+            btnFpv.classList.replace('secondary-btn', 'danger-btn');
             fpvInstructions.classList.remove('hidden');
         } else {
-            btnFpv.textContent = "切换第一人称 (FPV)";
-            btnFpv.classList.replace('danger-btn', 'primary-btn');
+            btnFpv.textContent = "💻 切换第一人称 (FPV)";
+            btnFpv.classList.replace('danger-btn', 'secondary-btn');
             fpvInstructions.classList.add('hidden');
         }
     });
@@ -382,15 +437,12 @@ window.addEventListener('dblclick', (e) => {
         
         if(intersects.length > 0) {
             const hitPoint = intersects[0].point;
-            myDrone.flyTo(hitPoint);
-            
-            const marker = new THREE.Mesh(
-                new THREE.SphereGeometry(2),
-                new THREE.MeshBasicMaterial({ color: 0xd4af37 })
-            );
-            marker.position.copy(hitPoint);
-            scene.add(marker);
-            setTimeout(() => scene.remove(marker), 1000);
+            if (e.shiftKey) {
+                myDrone.removeLastWaypoint();
+            } else {
+                myDrone.addWaypoint(hitPoint);
+            }
+            window.updatePathVisualization();
         }
     }
 });
