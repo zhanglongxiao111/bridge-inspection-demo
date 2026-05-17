@@ -91,8 +91,8 @@ export class Drone {
             if(key === 'shift') { this.keys.shift = true; e.preventDefault(); }
             if(this.keys.hasOwnProperty(key)) {
                 this.keys[key] = true;
-                // Interrupt auto-nav if in FPV
-                if (this.isFPV && this.flightState === 'AUTO_NAV') {
+                // Interrupt auto-nav or IDLE if in FPV
+                if (this.isFPV && (this.flightState === 'AUTO_NAV' || this.flightState === 'IDLE' || this.flightState === 'PHOTOGRAPHING')) {
                     this.flightState = 'MANUAL';
                     if(this.onStateChange) this.onStateChange('MANUAL');
                 }
