@@ -1,6 +1,7 @@
 import './style.css';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { Drone } from './modules/Drone.js';
 
 // --- Theme Management ---
 const themeBtn = document.getElementById('theme-toggle');
@@ -374,9 +375,14 @@ function updateSceneTheme(bgColor, meshColor, gridColor, lightColor, landColor) 
 // --- Animation Loop ---
 let fraction = 0;
 const clock = new THREE.Clock();
+
+const myDrone = window.myDrone = new Drone(scene, camera, controls);
+
 function animate() {
     requestAnimationFrame(animate);
-    controls.update();
+    const dt = clock.getDelta();
+    if (!myDrone.isFPV) controls.update();
+    myDrone.update(dt);
     
     // Animate cars
     cars.forEach(car => {
@@ -444,6 +450,51 @@ document.querySelectorAll('.node-item').forEach(item => {
             controls.target.set(targetMap[targetId].x, targetMap[targetId].y - 30, 0);
         }
     });
+});
+
+// FPV Toggle Button
+const btnFpv = document.getElementById('btn-toggle-fpv');
+const fpvInstructions = document.getElementById('fpv-instructions');
+if(btnFpv) {
+    btnFpv.addEventListener('click', () => {
+        const isFpv = myDrone.toggleView();
+        if(isFpv) {
+            btnFpv.textContent = "退出 FPV (返回上帝视角)";
+            btnFpv.classList.replace('primary-btn', 'danger-btn');
+            fpvInstructions.classList.remove('hidden');
+        } else {
+            btnFpv.textContent = "切换第一人称 (FPV)";
+            btnFpv.classList.replace('danger-btn', 'primary-btn');
+            fpvInstructions.classList.add('hidden');
+        }
+    });
+}
+
+// Double Click Raycaster for TPV AutoNav
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+window.addEventListener('dblclick', (e) => {
+    if(document.getElementById('view-flight-control').classList.contains('active') && !myDrone.isFPV) {
+        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects([bridgeGroup, terrainGroup], true);
+        
+        if(intersects.length > 0) {
+            const hitPoint = intersects[0].point;
+            myDrone.flyTo(hitPoint);
+            
+            const marker = new THREE.Mesh(
+                new THREE.SphereGeometry(2),
+                new THREE.MeshBasicMaterial({ color: 0xd4af37 })
+            );
+            marker.position.copy(hitPoint);
+            scene.add(marker);
+            setTimeout(() => scene.remove(marker), 1000);
+        }
+    }
 });
 
 // --- Navigation Routing ---
@@ -548,5 +599,9 @@ if (cesiumContainer && typeof Cesium !== 'undefined') {
 
     window.cesiumViewer = viewer;
 }
+
+
+
+
 
 

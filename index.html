@@ -100,21 +100,34 @@
         <!-- Main Content Area -->
         <main class="main-content">
            <!-- Bottom Timeline -->
-           <div class="waypoint-timeline glass-panel">
-             <div class="timeline-header">
-               <span class="mission-time">已飞行: 05:14 (预计43个航点)</span>
-               <span class="mission-percent">95%</span>
-             </div>
-             <div class="timeline-track">
-               <div class="timeline-progress" style="width: 80%;"></div>
-               <div class="wp-node completed" style="left: 0%;"><span>起飞</span></div>
-               <div class="wp-node completed" style="left: 20%;"><span>航点36</span></div>
-               <div class="wp-node completed" style="left: 40%;"><span>航点37</span></div>
-               <div class="wp-node completed" style="left: 60%;"><span>航点38</span></div>
-               <div class="wp-node active" style="left: 80%;"><span>航点39</span></div>
-               <div class="wp-node pending" style="left: 100%;"><span>返航</span></div>
-             </div>
-           </div>
+            <div class="waypoint-timeline glass-panel">
+              <div class="timeline-header">
+                <span class="mission-time">已飞行: 05:14 (预计43个航点)</span>
+                <span class="mission-percent">95%</span>
+              </div>
+              <div class="timeline-track">
+                <div class="timeline-progress" style="width: 80%;"></div>
+                <div class="wp-node completed" style="left: 0%;"><span>起飞</span></div>
+                <div class="wp-node completed" style="left: 20%;"><span>航点36</span></div>
+                <div class="wp-node completed" style="left: 40%;"><span>航点37</span></div>
+                <div class="wp-node completed" style="left: 60%;"><span>航点38</span></div>
+                <div class="wp-node active" style="left: 80%;"><span>航点39</span></div>
+                <div class="wp-node pending" style="left: 100%;"><span>返航</span></div>
+              </div>
+            </div>
+
+            <!-- FPV Controls & Instructions -->
+            <div class="fpv-controls-overlay">
+                <button id="btn-toggle-fpv" class="action-btn primary-btn" style="pointer-events: auto;">切换第一人称 (FPV)</button>
+                <div id="fpv-instructions" class="glass-panel hidden" style="margin-top: 10px; padding: 15px; font-size: 0.85rem; pointer-events: none;">
+                    <strong>[飞行控制]</strong><br/>
+                    W/S: 前进/后退<br/>
+                    A/D: 左右平移<br/>
+                    Q/E: 旋转机头<br/>
+                    空格/Shift: 升/降<br/>
+                    <em>* 第三视角下双击桥梁可自动飞往目标</em>
+                </div>
+            </div>
         </main>
 
         <!-- Right Sidebar: FPV & AI Feed -->
