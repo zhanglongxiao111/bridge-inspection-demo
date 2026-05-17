@@ -6,7 +6,18 @@
 
 ---
 
-## 1. 🌍 宏观与微观空间联动重构 (Macro-Micro Transition)
+## 1. 📁 项目目录与架构整理 (Project Directory Restructuring)
+**现状痛点**：目前项目目录“乱七八糟”，所有的逻辑（包含 UI、3D 渲染、初始化）高度耦合在根目录下的 main.js 和 index.html 中，静态资源 (图片) 也散落在 public/ 目录下缺乏分类。
+**提升方案**：
+- **资源分类 (Assets Management)**：在 public/ 下建立 /textures, /models, /ui, /icons 等子目录，将散落的图片、图标和即将引入的高精模型进行归类存放。
+- **源码拆分 (Source Code Modularization)**：
+  - 建立 /src 目录，将入口代码从根目录移入。
+  - 将 main.js 拆解为：src/core/Renderer.js (Three.js 核心逻辑), src/core/DroneController.js (飞行物理), src/ui/UIManager.js (DOM 操作与面板控制), src/ui/Kanban.js (工作流看板)。
+- **组件化 (Componentization)**：利用 Vite 的特性，逐步将冗长的 HTML 拆分为独立的小模板文件（甚至考虑引入轻量级组件库或 Web Components）。
+
+---
+
+## 2. 🌍 宏观与微观空间联动重构 (Macro-Micro Transition)
 **现状痛点**：目前“指挥中心（Cesium 地球）”和“飞行控制（Three.js 局部场景）”是两个完全割裂的独立 DOM 容器，切换时只是生硬的 CSS 隐藏与显示，毫无空间连续性。
 **提升方案**：
 - **地理坐标映射 (Geo-Referencing)**：建立 Cesium 经纬度 (WGS84) 与 Three.js 局部直角坐标系的矩阵转换关系。
@@ -15,7 +26,7 @@
 
 ---
 
-## 2. 🛸 无人机仿真引擎重置 (Drone Physics & Assets)
+## 3. 🛸 无人机仿真引擎重置 (Drone Physics & Assets)
 **现状痛点**：目前无人机仅由几个 `THREE.BoxGeometry` 拼接而成，物理飞行仅靠简单的 `translateZ` 线性位移计算，毫无惯性、空气动力学和真实感。
 **提升方案**：
 - **高精模型替换**：引入经过减面和 Draco 压缩的真实无人机 `.glb` 静态模型（如 DJI M350 RTK），包含折叠桨叶的细节。
@@ -26,7 +37,7 @@
 
 ---
 
-## 3. 🛡️ 环境感知与交互反馈 (Environment & Collision)
+## 4. 🛡️ 环境感知与交互反馈 (Environment & Collision)
 **现状痛点**：当前无人机可以穿模飞跃桥墩，遇到海平面不会坠机，完全是一台“幽灵摄像机”。
 **提升方案**：
 - **射线检测 (Raycasting) 避障导航**：
@@ -36,7 +47,7 @@
 
 ---
 
-## 4. 🚀 彩蛋功能：战术武装拓展 (Tactical Payload)
+## 5. 🚀 彩蛋功能：战术武装拓展 (Tactical Payload)
 **现状痛点**：缺乏趣味性。
 **提升方案**：
 - 在系统管理界面增加“隐藏开发者模式”，激活后无人机底部挂载模块切换为“导弹发射器”。
@@ -45,7 +56,7 @@
 
 ---
 
-## 5. 🔀 其他代码层面的重构 (Code Refactoring)
+## 6. 🔀 其他代码层面的重构 (Code Refactoring)
 1. **动画曲线平滑化**：当前上帝视角双击切换目标时，使用的线性 `lerp` 导致镜头僵硬。需改用 `TWEEN.js` 或 `GSAP` 实现 Ease-In-Out 平滑曲线。
 2. **路径可视化 (Path Line)**：目前使用尖锐的直线连接航点。需采用 `THREE.CatmullRomCurve3` 生成曲线航迹，让自动导航的飞行路线更符合空气动力学轨迹。
 3. **性能优化**：水面目前是简单的透明平面，应当引入 `WaterShader` 替换现有的蓝色平面，增加海浪起伏和环境光反射，以匹配暗色主题的宏大感。
