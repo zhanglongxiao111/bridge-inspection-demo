@@ -37,7 +37,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setClearColor(0x080808, 1);
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = THREE.PCFShadowMap;
 container.appendChild(renderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -274,6 +274,20 @@ for(let i=0; i<30; i++) {
 }
 
 // --- Procedural Drone Model ---
+function updateSceneTheme(bgColor, meshColor, gridColor, lightColor, landColor) {
+    renderer.setClearColor(bgColor, 1);
+    scene.fog.color.setHex(bgColor);
+    concreteMat.color.setHex(meshColor);
+    terrainMat.color.setHex(landColor);
+    
+    scene.remove(gridHelper);
+    gridHelper = new THREE.GridHelper(3000, 150, lightColor, gridColor);
+    gridHelper.position.y = -14.5;
+    gridHelper.material.transparent = true;
+    gridHelper.material.opacity = 0.2;
+    scene.add(gridHelper);
+}
+
 // --- Animation Loop ---
 let fraction = 0;
 const clock = new THREE.Clock();
