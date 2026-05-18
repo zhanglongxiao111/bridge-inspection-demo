@@ -46,8 +46,8 @@
 }
 
 .geofence-panel {
-  margin: 0 20px 32px;
-  max-width: 1000px;
+  width: min(1000px, calc(100% - 24px));
+  margin: 0 auto 32px;
 }
 
 .geofence-header {
@@ -89,7 +89,7 @@
 .geofence-svg {
   width: 100%;
   aspect-ratio: 16 / 7;
-  min-height: 220px;
+  min-height: clamp(180px, 22vw, 220px);
   border: 1px solid var(--panel-border);
   border-radius: 8px;
   background:
@@ -185,6 +185,6 @@
   }
 
   .geofence-panel {
-    margin-inline: 12px;
+    width: calc(100% - 24px);
   }
 }

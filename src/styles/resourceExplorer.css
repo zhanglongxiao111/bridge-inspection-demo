@@ -79,7 +79,7 @@
 
 .resource-explorer-stage {
   position: relative;
-  height: 270px;
+  height: clamp(220px, 24vh, 270px);
   background:
     linear-gradient(rgba(212, 175, 55, 0.08) 1px, transparent 1px),
     linear-gradient(90deg, rgba(212, 175, 55, 0.06) 1px, transparent 1px),

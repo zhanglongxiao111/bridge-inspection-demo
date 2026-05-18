@@ -1,6 +1,6 @@
 #view-command-center {
   position: relative;
-  padding: 20px;
+  padding: clamp(12px, 1.4vw, 20px);
   flex-direction: column;
 }
 
@@ -30,9 +30,9 @@
   width: 100%;
   height: 100%;
   display: grid;
-  grid-template-columns: 300px 1fr 300px;
-  padding: 20px;
-  gap: 20px;
+  grid-template-columns: clamp(230px, 18vw, 300px) 1fr clamp(230px, 18vw, 300px);
+  padding: clamp(12px, 1.4vw, 20px);
+  gap: clamp(12px, 1.4vw, 20px);
   pointer-events: none;
 }
 
@@ -40,14 +40,14 @@
   pointer-events: auto;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: clamp(10px, 1vw, 15px);
 }
 
 .cc-card {
   background: rgba(10, 10, 10, 0.7);
   backdrop-filter: blur(10px);
   border: 1px solid var(--panel-border);
-  padding: 20px;
+  padding: clamp(12px, 1.3vw, 20px);
   border-radius: 8px;
 }
 
@@ -60,14 +60,14 @@
 }
 
 .cc-card .value {
-  font-size: 2rem;
+  font-size: clamp(1.35rem, 1.8vw, 2rem);
   font-weight: 700;
   color: var(--accent-color);
   font-family: monospace;
 }
 
 #view-resource-management {
-  padding: 40px;
+  padding: clamp(16px, 2.2vw, 40px);
   flex-direction: column;
   overflow-y: auto;
   pointer-events: auto;
@@ -85,13 +85,14 @@
 #view-workflow {
   flex-direction: column;
   overflow: hidden;
-  padding: 20px;
+  padding: clamp(12px, 1.4vw, 20px);
 }
 
 .resource-header {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 30px;
+  gap: 14px;
+  margin-bottom: clamp(16px, 2vw, 30px);
   align-items: center;
 }
 
@@ -103,8 +104,8 @@
 
 .resource-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 30px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: clamp(16px, 1.8vw, 30px);
 }
 
 .resource-card {
@@ -125,13 +126,13 @@
 
 .rc-img {
   width: 100%;
-  height: 220px;
+  height: clamp(150px, 16vw, 220px);
   object-fit: cover;
   border-bottom: 1px solid var(--panel-border);
 }
 
 .rc-info {
-  padding: 20px;
+  padding: clamp(14px, 1.3vw, 20px);
 }
 
 .rc-title {
@@ -141,6 +142,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
 }
 
 .rc-status {
@@ -155,4 +157,45 @@
   font-size: 0.85rem;
   color: var(--text-muted);
   line-height: 1.6;
+}
+
+@media (max-width: 1180px) {
+  #view-command-center,
+  #view-resource-management,
+  #view-workflow,
+  #view-system {
+    min-height: calc(100vh - 58px);
+    overflow-y: auto;
+  }
+
+  .cc-stats-overlay {
+    grid-template-columns: minmax(220px, 0.8fr) 1fr;
+  }
+
+  .cc-stat-panel:last-child {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .cc-stats-overlay {
+    position: relative;
+    height: auto;
+    grid-template-columns: 1fr;
+  }
+
+  .cc-map-container {
+    min-height: 420px;
+  }
+
+  .cc-stat-panel:last-child {
+    grid-template-columns: 1fr;
+  }
+
+  .resource-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }

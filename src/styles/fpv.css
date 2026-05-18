@@ -97,13 +97,14 @@
 
 .fpv-controls-overlay {
   position: absolute;
-  bottom: 120px;
+  bottom: clamp(78px, 11vh, 120px);
   left: 50%;
   transform: translateX(-50%);
   z-index: 200;
   display: flex;
   flex-direction: column;
   align-items: center;
+  width: min(760px, calc(100% - 32px));
 }
 
 header,
@@ -201,23 +202,23 @@ body.fpv-mode .fpv-hud-layer {
 }
 
 .fpv-hud-top-left {
-  top: 74px;
-  left: 28px;
+  top: clamp(58px, 7vh, 74px);
+  left: clamp(14px, 1.5vw, 28px);
 }
 
 .fpv-hud-top-right {
-  top: 74px;
-  right: 28px;
+  top: clamp(58px, 7vh, 74px);
+  right: clamp(14px, 1.5vw, 28px);
 }
 
 .fpv-hud-bottom-left {
-  bottom: 92px;
-  left: 28px;
+  bottom: clamp(74px, 9vh, 92px);
+  left: clamp(14px, 1.5vw, 28px);
 }
 
 .fpv-hud-bottom-right {
-  right: 28px;
-  bottom: 92px;
+  right: clamp(14px, 1.5vw, 28px);
+  bottom: clamp(74px, 9vh, 92px);
 }
 
 .fpv-hud-rec {
@@ -284,7 +285,7 @@ body.fpv-mode .fpv-hud-layer {
 
 .fpv-hud-ai-layer {
   position: absolute;
-  inset: 90px 110px 118px;
+  inset: clamp(76px, 8vh, 90px) clamp(48px, 6vw, 110px) clamp(96px, 10vh, 118px);
 }
 
 .fpv-ai-box {
@@ -384,5 +385,19 @@ body.fpv-mode .fpv-hud-layer {
 
   .fpv-hud-alert {
     top: 152px;
+  }
+}
+
+@media (max-height: 820px) and (min-width: 901px) {
+  .fpv-hud-panel,
+  .fpv-hud-readout {
+    min-height: 30px;
+    padding: 6px 9px;
+    font-size: 0.68rem;
+  }
+
+  .fpv-hud-center {
+    width: 118px;
+    height: 78px;
   }
 }
