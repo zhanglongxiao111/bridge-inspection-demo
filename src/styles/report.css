@@ -1,0 +1,55 @@
+.defect-highlight-requested {
+  animation: defectHighlightPulse 1.4s ease-out;
+  outline: 2px solid rgba(239, 68, 68, 0.88);
+  outline-offset: 2px;
+}
+
+.defect-report-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.defect-report-btn {
+  min-height: 32px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 6px;
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.defect-report-btn:hover,
+.defect-report-btn:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(59, 130, 246, 0.75);
+  background: rgba(59, 130, 246, 0.18);
+}
+
+.ai-defect-card {
+  border-color: rgba(212, 175, 55, 0.42);
+  background: rgba(212, 175, 55, 0.08);
+}
+
+.ai-defect-card h4 {
+  text-transform: capitalize;
+}
+
+@keyframes defectHighlightPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.46);
+  }
+
+  70% {
+    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}

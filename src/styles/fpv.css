@@ -1,0 +1,388 @@
+.fpv-container {
+  margin-bottom: 10px;
+}
+
+.fpv-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.pip-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 4px 8px;
+  transition: 0.2s;
+}
+
+.pip-btn:hover {
+  background: var(--accent-color);
+}
+
+.fpv-view {
+  position: relative;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  aspect-ratio: 16/9;
+  border: 1px solid var(--panel-border);
+}
+
+.fpv-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.fpv-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.4) 0%, transparent 20%, transparent 80%, rgba(0, 0, 0, 0.4) 100%);
+}
+
+.crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 50%;
+}
+
+.crosshair::before,
+.crosshair::after {
+  content: '';
+  position: absolute;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.crosshair::before {
+  top: 50%;
+  left: -10px;
+  right: -10px;
+  height: 1px;
+}
+
+.crosshair::after {
+  left: 50%;
+  top: -10px;
+  bottom: -10px;
+  width: 1px;
+}
+
+.fpv-data {
+  position: absolute;
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: #fff;
+  text-shadow: 1px 1px 2px #000;
+}
+
+.top-left {
+  top: 12px;
+  left: 12px;
+  color: var(--danger-color);
+  font-weight: bold;
+}
+
+.bottom-right {
+  bottom: 12px;
+  right: 12px;
+}
+
+.fpv-controls-overlay {
+  position: absolute;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+header,
+.sidebar-left {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+body.fpv-mode header {
+  opacity: 0;
+  transform: translateY(-20px);
+  pointer-events: none;
+}
+
+body.fpv-mode .sidebar-left {
+  opacity: 0;
+  transform: translateX(-20px);
+  pointer-events: none;
+}
+
+.sidebar-right,
+.waypoint-timeline {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+body.fpv-mode .sidebar-right {
+  opacity: 0;
+  transform: translateX(20px);
+  pointer-events: none;
+}
+
+body.fpv-mode .waypoint-timeline {
+  opacity: 0;
+  transform: translateY(-16px);
+  pointer-events: none;
+}
+
+body.fpv-mode .fpv-controls-overlay {
+  bottom: 28px;
+}
+
+body.fpv-mode #fpv-instructions {
+  display: none;
+}
+
+.fpv-hud-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 180;
+  opacity: 0;
+  pointer-events: none;
+  color: rgba(238, 249, 255, 0.95);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.65);
+  transition: opacity 0.25s ease;
+}
+
+body.fpv-mode .fpv-hud-layer {
+  opacity: 1;
+}
+
+.fpv-hud-vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.34), transparent 22%, transparent 78%, rgba(0, 0, 0, 0.34)),
+    linear-gradient(0deg, rgba(0, 0, 0, 0.32), transparent 18%, transparent 78%, rgba(0, 0, 0, 0.35));
+}
+
+.fpv-hud-panel,
+.fpv-hud-readout,
+.fpv-hud-alert {
+  position: absolute;
+  border: 1px solid rgba(72, 211, 255, 0.28);
+  background: rgba(4, 16, 24, 0.35);
+  backdrop-filter: blur(5px);
+  box-shadow: 0 0 18px rgba(0, 170, 255, 0.12);
+}
+
+.fpv-hud-panel,
+.fpv-hud-readout {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-height: 34px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  letter-spacing: 0;
+}
+
+.fpv-hud-panel strong,
+.fpv-hud-readout strong {
+  color: #65efff;
+  font-weight: 700;
+}
+
+.fpv-hud-top-left {
+  top: 74px;
+  left: 28px;
+}
+
+.fpv-hud-top-right {
+  top: 74px;
+  right: 28px;
+}
+
+.fpv-hud-bottom-left {
+  bottom: 92px;
+  left: 28px;
+}
+
+.fpv-hud-bottom-right {
+  right: 28px;
+  bottom: 92px;
+}
+
+.fpv-hud-rec {
+  position: relative;
+  padding-left: 14px;
+  color: #ff5f6d;
+  font-weight: 800;
+}
+
+.fpv-hud-rec::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff4657;
+  box-shadow: 0 0 10px rgba(255, 70, 87, 0.9);
+  transform: translateY(-50%);
+}
+
+.fpv-hud-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 146px;
+  height: 96px;
+  transform: translate(-50%, -50%);
+}
+
+.fpv-hud-reticle,
+.fpv-hud-horizon {
+  position: absolute;
+  inset: 0;
+}
+
+.fpv-hud-reticle::before,
+.fpv-hud-reticle::after {
+  content: "";
+  position: absolute;
+  background: rgba(102, 239, 255, 0.86);
+  box-shadow: 0 0 8px rgba(102, 239, 255, 0.45);
+}
+
+.fpv-hud-reticle::before {
+  top: 50%;
+  left: 28px;
+  right: 28px;
+  height: 1px;
+}
+
+.fpv-hud-reticle::after {
+  top: 22px;
+  bottom: 22px;
+  left: 50%;
+  width: 1px;
+}
+
+.fpv-hud-horizon {
+  border: 1px solid rgba(102, 239, 255, 0.3);
+  border-radius: 50%;
+}
+
+.fpv-hud-ai-layer {
+  position: absolute;
+  inset: 90px 110px 118px;
+}
+
+.fpv-ai-box {
+  position: absolute;
+  min-width: 94px;
+  min-height: 46px;
+  border: 1px solid #ffcf5c;
+  border-radius: 3px;
+  box-shadow: 0 0 12px rgba(255, 207, 92, 0.22);
+}
+
+.fpv-ai-box span {
+  position: absolute;
+  top: -24px;
+  left: -1px;
+  max-width: 180px;
+  padding: 3px 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: rgba(9, 18, 26, 0.82);
+  color: #fff2bd;
+  font-size: 0.68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fpv-ai-box.severity-high,
+.fpv-ai-box.severity-critical {
+  border-color: #ff5f6d;
+  box-shadow: 0 0 14px rgba(255, 95, 109, 0.28);
+}
+
+.fpv-ai-box.severity-low {
+  border-color: #66efff;
+}
+
+.fpv-hud-alert {
+  top: 124px;
+  left: 50%;
+  max-width: min(520px, calc(100vw - 48px));
+  padding: 9px 14px;
+  border-radius: 6px;
+  background: rgba(4, 16, 24, 0.55);
+  color: #d7fbff;
+  font-size: 0.82rem;
+  opacity: 0;
+  text-align: center;
+  transform: translateX(-50%);
+}
+
+.fpv-hud-alert.is-active {
+  opacity: 1;
+}
+
+.fpv-hud-alert[data-level="danger"],
+.fpv-hud-alert[data-level="blocked"] {
+  border-color: rgba(255, 95, 109, 0.55);
+  color: #ffd9df;
+}
+
+@media (max-width: 900px) {
+  .fpv-hud-top-left,
+  .fpv-hud-top-right,
+  .fpv-hud-bottom-left,
+  .fpv-hud-bottom-right {
+    left: 14px;
+    right: 14px;
+    justify-content: space-between;
+  }
+
+  .fpv-hud-top-left {
+    top: 58px;
+  }
+
+  .fpv-hud-top-right {
+    top: 104px;
+  }
+
+  .fpv-hud-bottom-left {
+    bottom: 150px;
+  }
+
+  .fpv-hud-bottom-right {
+    bottom: 104px;
+  }
+
+  .fpv-hud-panel,
+  .fpv-hud-readout {
+    gap: 8px;
+    padding: 7px 9px;
+    font-size: 0.68rem;
+  }
+
+  .fpv-hud-ai-layer {
+    inset: 150px 24px 180px;
+  }
+
+  .fpv-hud-alert {
+    top: 152px;
+  }
+}

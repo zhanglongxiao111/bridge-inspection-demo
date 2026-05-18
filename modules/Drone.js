@@ -1,108 +1,92 @@
 import * as THREE from 'three';
+import { DroneMotionController } from '../src/core/drone/DroneMotionController.js';
+import { DRONE_STATES, DroneStateMachine } from '../src/core/drone/DroneStateMachine.js';
+import { DroneVisual } from '../src/core/drone/DroneVisual.js';
+
+const DEFAULT_WAYPOINTS = [
+    new THREE.Vector3(-250, 110, 140),
+    new THREE.Vector3(0, 45, 160),
+    new THREE.Vector3(250, 110, 140)
+];
+const INITIAL_POSITION = new THREE.Vector3(0, -10, 150);
+const HOVER_OFFSET = new THREE.Vector3(15, 10, 15);
+const MANUAL_KEYS = new Set(['w', 'a', 's', 'd', ' ', 'shift', 'q', 'e']);
+export const DRONE_PHOTO_FLASH_EVENT = 'bridge:drone-photo-flash';
+const DEFAULT_FPV_CAMERA_POSE = Object.freeze({
+    offset: new THREE.Vector3(0, -1.05, -3.2),
+    lookAt: new THREE.Vector3(0, -1.12, -120)
+});
 
 export class Drone {
-    constructor(scene, camera, controls) {
+    constructor(scene, camera, controls, options = {}) {
         this.scene = scene;
         this.camera = camera;
         this.controls = controls;
-
         this.isFPV = false;
-        this.speed = 100.0;
-        this.rotSpeed = 1.5;
-        
-        this.waypoints = [
-            new THREE.Vector3(-250, 110, 140),
-            new THREE.Vector3(0, 45, 160),
-            new THREE.Vector3(250, 110, 140)
-        ];
-        this.flightState = 'IDLE'; // IDLE, AUTO_NAV, PHOTOGRAPHING, MANUAL
         this.photoTimer = 0;
-
+        this.photoFlashDispatched = false;
+        this.holdPosition = null;
+        this.safetyHoldPosition = null;
+        this.safetyState = null;
+        this.safetyAlert = null;
+        this.waterImpactState = { active: false, mode: 'clear', position: null };
+        this.splashState = { active: false, startedAt: 0, position: null };
         this.keys = { w: false, a: false, s: false, d: false, space: false, shift: false, q: false, e: false };
+        this.waypoints = DEFAULT_WAYPOINTS.map((waypoint) => waypoint.clone());
 
-        this.mesh = this.createModel();
-        
-        // Initial position (on the ground/bridge deck)
-        this.position = new THREE.Vector3(0, -10, 150);
-        this.mesh.position.copy(this.position);
+        this.visual = new DroneVisual();
+        this.mesh = this.visual.group;
+        const initialPosition = toVector3(options.initialPosition, INITIAL_POSITION);
+        this.homePosition = initialPosition.clone();
+        this.mesh.position.copy(initialPosition);
         this.scene.add(this.mesh);
 
-        this._initControls();
-        
-        // Expose a callback for UI updates
+        this.motion = new DroneMotionController({ position: initialPosition });
+        this.motion.syncToMesh(this.mesh);
+        this.stateMachine = new DroneStateMachine(DRONE_STATES.IDLE);
+        this.stateMachine.onChange = (state) => this.onStateChange?.(state);
+
+        this.position = this.mesh.position;
         this.onStateChange = null;
+        this._initControls();
     }
 
-    createModel() {
-        const group = new THREE.Group();
-        
-        const bodyGeom = new THREE.BoxGeometry(4, 1.5, 5);
-        const mat = new THREE.MeshStandardMaterial({ 
-            color: 0x1a1a1a, roughness: 0.3, metalness: 0.8 
-        });
-        const body = new THREE.Mesh(bodyGeom, mat);
-        group.add(body);
+    get flightState() {
+        return this.stateMachine.state;
+    }
 
-        this.rotors = [];
-        const armDistX = 3.5, armDistZ = 3.5;
-        const positions = [
-            [armDistX, armDistZ], [-armDistX, armDistZ], 
-            [armDistX, -armDistZ], [-armDistX, -armDistZ]
-        ];
-        
-        positions.forEach(pos => {
-            const armGeom = new THREE.CylinderGeometry(0.3, 0.3, 5);
-            armGeom.rotateX(Math.PI / 2);
-            const arm = new THREE.Mesh(armGeom, mat);
-            arm.position.set(pos[0]/2, 0, pos[1]/2);
-            arm.lookAt(pos[0], 0, pos[1]);
-            group.add(arm);
-
-            const propGeom = new THREE.CylinderGeometry(2.5, 2.5, 0.1, 16);
-            const propMat = new THREE.MeshStandardMaterial({ color: 0x222222, transparent: true, opacity: 0.4 });
-            const prop = new THREE.Mesh(propGeom, propMat);
-            prop.position.set(pos[0], 0.5, pos[1]);
-            group.add(prop);
-            this.rotors.push(prop);
-        });
-
-        // Spotlight
-        this.spotLight = new THREE.SpotLight(0xd4af37, 200, 300, Math.PI / 8, 0.5, 1);
-        this.spotLight.position.set(0, -1, 0);
-        
-        this.targetObj = new THREE.Object3D();
-        this.targetObj.position.set(0, -100, 0);
-        group.add(this.targetObj);
-        this.spotLight.target = this.targetObj;
-        group.add(this.spotLight);
-
-        // Flash Light for photographing
-        this.flashLight = new THREE.PointLight(0xffffff, 0, 100);
-        this.flashLight.position.set(0, -2, 0);
-        group.add(this.flashLight);
-
-        return group;
+    set flightState(nextState) {
+        this.stateMachine.setState(nextState);
     }
 
     _initControls() {
-        window.addEventListener('keydown', (e) => {
-            const key = e.key.toLowerCase();
-            if(key === ' ') { this.keys.space = true; e.preventDefault(); }
-            if(key === 'shift') { this.keys.shift = true; e.preventDefault(); }
-            if(this.keys.hasOwnProperty(key)) {
-                this.keys[key] = true;
-                // Interrupt auto-nav or IDLE if in FPV
-                if (this.isFPV && (this.flightState === 'AUTO_NAV' || this.flightState === 'IDLE' || this.flightState === 'PHOTOGRAPHING')) {
-                    this.flightState = 'MANUAL';
-                    if(this.onStateChange) this.onStateChange('MANUAL');
-                }
+        window.addEventListener('keydown', (event) => {
+            const key = event.key.toLowerCase();
+            const mappedKey = key === ' ' ? 'space' : key;
+
+            if (!MANUAL_KEYS.has(key)) {
+                return;
+            }
+
+            event.preventDefault();
+
+            if (Object.prototype.hasOwnProperty.call(this.keys, mappedKey)) {
+                this.keys[mappedKey] = true;
+            }
+
+            if (this.isFPV && this.stateMachine.canKeyboardInterrupt()) {
+                this.flightState = DRONE_STATES.MANUAL;
+                this.motion.stop();
             }
         });
-        window.addEventListener('keyup', (e) => {
-            const key = e.key.toLowerCase();
-            if(key === ' ') this.keys.space = false;
-            if(key === 'shift') this.keys.shift = false;
-            if(this.keys.hasOwnProperty(key)) this.keys[key] = false;
+
+        window.addEventListener('keyup', (event) => {
+            const key = event.key.toLowerCase();
+            const mappedKey = key === ' ' ? 'space' : key;
+
+            if (Object.prototype.hasOwnProperty.call(this.keys, mappedKey)) {
+                this.keys[mappedKey] = false;
+            }
         });
     }
 
@@ -114,112 +98,263 @@ export class Drone {
 
     addWaypoint(vec3) {
         this.waypoints.push(vec3.clone());
-        if (this.flightState === 'IDLE') {
-            this.flightState = 'AUTO_NAV';
-            if(this.onStateChange) this.onStateChange('AUTO_NAV');
+
+        if (this.flightState === DRONE_STATES.IDLE) {
+            this.flightState = DRONE_STATES.AUTO_NAV;
         }
     }
-    
+
     removeLastWaypoint() {
-        if(this.waypoints.length > 0) {
+        if (this.waypoints.length > 0) {
             this.waypoints.pop();
         }
     }
 
     resumeMission() {
-        if(this.waypoints.length > 0) {
-            this.flightState = 'AUTO_NAV';
-            if(this.onStateChange) this.onStateChange('AUTO_NAV');
+        if (this.waypoints.length > 0) {
+            this.flightState = DRONE_STATES.AUTO_NAV;
         }
     }
 
     startMission() {
-        if(this.waypoints.length > 0 && this.flightState === 'IDLE') {
-            this.flightState = 'AUTO_NAV';
-            if(this.onStateChange) this.onStateChange('AUTO_NAV');
+        if (this.waypoints.length > 0 && this.flightState === DRONE_STATES.IDLE) {
+            this.flightState = DRONE_STATES.AUTO_NAV;
         }
     }
 
     update(delta) {
-        if (delta > 0.1) delta = 0.1;
+        const dt = Math.min(delta, 0.1);
+        const isAirborne = this.mesh.position.y > this.homePosition.y + 8;
+        const isFlying = isAirborne || this.flightState !== DRONE_STATES.IDLE;
 
-        // Spin rotors
-        const isFlying = this.position.y > -8 || this.flightState !== 'IDLE';
-        if (isFlying) {
-            this.rotors.forEach((r, i) => r.rotation.y += (i % 2 === 0 ? 20 : -20) * delta);
+        this.visual.updateRotors(dt, isFlying);
+        this.updateFlightMode(dt);
+        this.motion.step(dt);
+        this.motion.syncMesh(this.mesh);
+        this.updateCamera(dt);
+    }
+
+    updateFlightMode(delta) {
+        if (this.flightState === DRONE_STATES.MANUAL && this.isFPV) {
+            this.motion.applyManualInput(this.getSafetyFilteredKeys(), delta);
+            return;
         }
 
-        if (this.isFPV) {
-            if (this.flightState === 'MANUAL') {
-                const moveAmt = this.speed * delta;
-                const rotAmt = this.rotSpeed * delta;
-                
-                if(this.keys.w) this.mesh.translateZ(-moveAmt);
-                if(this.keys.s) this.mesh.translateZ(moveAmt);
-                if(this.keys.a) this.mesh.translateX(-moveAmt);
-                if(this.keys.d) this.mesh.translateX(moveAmt);
-                if(this.keys.space) this.mesh.translateY(moveAmt);
-                if(this.keys.shift) this.mesh.translateY(-moveAmt);
-                if(this.keys.q) this.mesh.rotateY(rotAmt);
-                if(this.keys.e) this.mesh.rotateY(-rotAmt);
-            }
-            
-            const offset = new THREE.Vector3(0, 0.5, -2);
-            offset.applyQuaternion(this.mesh.quaternion);
-            this.camera.position.copy(this.mesh.position).add(offset);
-            
-            const lookAt = new THREE.Vector3(0, 0, -100);
-            lookAt.applyQuaternion(this.mesh.quaternion);
-            this.camera.lookAt(this.mesh.position.clone().add(lookAt));
-        } else {
-            this.controls.target.lerp(this.mesh.position, 5 * delta);
+        if (this.flightState === DRONE_STATES.AUTO_NAV) {
+            this.updateAutoNavigation(delta);
+            return;
         }
-        
-        // Auto Nav Logic (runs regardless of FPV/TPV, unless interrupted)
-        if (this.flightState === 'AUTO_NAV' && this.waypoints.length > 0) {
-            const target = this.waypoints[0].clone();
-            // Hover 1m away, slightly above
-            const hoverPos = target.clone().add(new THREE.Vector3(15, 10, 15));
-            
-            this.mesh.position.lerp(hoverPos, 1.0 * delta);
-            
-            const targetPos2D = new THREE.Vector3(target.x, this.mesh.position.y, target.z);
-            if (this.mesh.position.distanceTo(hoverPos) > 5) {
-                const targetQuat = new THREE.Quaternion().setFromRotationMatrix(
-                    new THREE.Matrix4().lookAt(this.mesh.position, targetPos2D, new THREE.Vector3(0,1,0))
-                );
-                this.mesh.quaternion.slerp(targetQuat, 2 * delta);
-                // Aim spotlight at target
-                this.targetObj.position.copy(this.mesh.worldToLocal(target.clone()));
-            }
 
-            if (this.mesh.position.distanceTo(hoverPos) < 2) {
-                // Reached waypoint
-                this.flightState = 'PHOTOGRAPHING';
-                this.photoTimer = 1.5;
-                if(this.onStateChange) this.onStateChange('PHOTOGRAPHING');
-            }
-        }
-        
-        if (this.flightState === 'PHOTOGRAPHING') {
-            this.photoTimer -= delta;
-            // Flash effect
-            if (this.photoTimer > 1.2 && this.photoTimer < 1.4) {
-                this.flashLight.intensity = 1000;
-            } else {
-                this.flashLight.intensity = 0;
-            }
-            
-            if (this.photoTimer <= 0) {
-                this.waypoints.shift(); // Remove the completed waypoint
-                if (this.waypoints.length > 0) {
-                    this.flightState = 'AUTO_NAV';
-                    if(this.onStateChange) this.onStateChange('AUTO_NAV');
-                } else {
-                    this.flightState = 'IDLE';
-                    if(this.onStateChange) this.onStateChange('IDLE');
-                }
-            }
+        if (this.flightState === DRONE_STATES.PHOTOGRAPHING) {
+            this.updatePhotography(delta);
         }
     }
+
+    updateAutoNavigation(delta) {
+        if (this.safetyState?.waterImpact) {
+            this.motion.stop();
+            return;
+        }
+
+        if (this.safetyState?.blocked && this.safetyState.reason === 'geofence-exit') {
+            this.updateSafetyHold(delta);
+            return;
+        }
+
+        if (this.safetyState?.blocked) {
+            this.updateAutoAvoidance(delta);
+            return;
+        }
+
+        this.safetyHoldPosition = null;
+
+        if (this.waypoints.length === 0) {
+            this.flightState = DRONE_STATES.IDLE;
+            return;
+        }
+
+        const target = this.waypoints[0].clone();
+        const hoverPosition = target.clone().add(HOVER_OFFSET);
+
+        this.motion.applyAutoNavigation(hoverPosition, delta);
+        this.motion.facePoint(new THREE.Vector3(target.x, this.mesh.position.y, target.z), delta);
+        this.visual.aimSpotlightAt(target);
+
+        if (this.motion.getPosition().distanceTo(hoverPosition) < 2.5 && this.motion.getVelocity().length() < 12) {
+            this.holdPosition = hoverPosition;
+            this.motion.stop();
+            this.flightState = DRONE_STATES.PHOTOGRAPHING;
+            this.photoTimer = 1.5;
+            this.photoFlashDispatched = false;
+        }
+    }
+
+    updateAutoAvoidance(delta) {
+        const localAvoidance = toVector3(
+            this.safetyState?.avoidanceVector,
+            new THREE.Vector3(1, 0.12, 0)
+        );
+        const worldAvoidance = localAvoidance.applyQuaternion(this.mesh.quaternion);
+
+        if (worldAvoidance.lengthSq() === 0) {
+            worldAvoidance.set(1, 0.12, 0);
+        }
+
+        const target = this.motion.getPosition().add(worldAvoidance.normalize().multiplyScalar(18));
+        this.motion.applyAutoNavigation(target, delta);
+        this.motion.facePoint(target, delta);
+    }
+
+    updateSafetyHold(delta) {
+        if (!this.safetyHoldPosition) {
+            this.safetyHoldPosition = this.motion.getPosition();
+        }
+
+        this.motion.holdAt(this.safetyHoldPosition, delta);
+        this.motion.stop();
+    }
+
+    updatePhotography(delta) {
+        this.photoTimer -= delta;
+        const flashActive = this.photoTimer > 1.2 && this.photoTimer < 1.4;
+        this.visual.setFlash(flashActive);
+
+        if (flashActive && !this.photoFlashDispatched) {
+            this.photoFlashDispatched = true;
+            this.dispatchPhotoFlashEvent();
+        }
+
+        if (this.holdPosition) {
+            this.motion.holdAt(this.holdPosition, delta);
+        }
+
+        if (this.photoTimer > 0) {
+            return;
+        }
+
+        this.visual.setFlash(false);
+        this.waypoints.shift();
+        this.holdPosition = null;
+        this.photoFlashDispatched = false;
+        this.flightState = this.waypoints.length > 0 ? DRONE_STATES.AUTO_NAV : DRONE_STATES.IDLE;
+    }
+
+    dispatchPhotoFlashEvent() {
+        if (typeof window === 'undefined' || typeof window.CustomEvent !== 'function') {
+            return;
+        }
+
+        window.dispatchEvent(new window.CustomEvent(DRONE_PHOTO_FLASH_EVENT, {
+            detail: {
+                position: vectorToPlain(this.motion.getPosition()),
+                state: this.flightState,
+                timestamp: new Date().toISOString()
+            }
+        }));
+    }
+
+    updateCamera(delta) {
+        if (this.isFPV) {
+            const pose = this.getFpvCameraPose();
+            const offset = pose.offset.clone().applyQuaternion(this.mesh.quaternion);
+            const lookAt = pose.lookAt.clone().applyQuaternion(this.mesh.quaternion);
+
+            this.camera.position.copy(this.mesh.position).add(offset);
+            this.camera.lookAt(this.mesh.position.clone().add(lookAt));
+            return;
+        }
+
+        this.controls.target.lerp(this.mesh.position, 5 * delta);
+    }
+
+    getFpvCameraPose() {
+        const visualPose = typeof this.visual.getFpvCameraPose === 'function'
+            ? this.visual.getFpvCameraPose()
+            : null;
+
+        return {
+            offset: toVector3(visualPose?.offset, DEFAULT_FPV_CAMERA_POSE.offset),
+            lookAt: toVector3(visualPose?.lookAt, DEFAULT_FPV_CAMERA_POSE.lookAt)
+        };
+    }
+
+    applySafetyPolicyState(safetyState) {
+        this.safetyState = safetyState ?? null;
+        this.safetyAlert = safetyState?.alert ?? null;
+
+        if (!safetyState?.waterImpact) {
+            if (safetyState?.reason !== 'geofence-exit') {
+                this.safetyHoldPosition = null;
+            }
+            return;
+        }
+
+        this.motion.stop();
+        this.holdPosition = this.motion.getPosition();
+        this.safetyHoldPosition = this.holdPosition.clone();
+        this.splashState = {
+            active: true,
+            startedAt: performance.now(),
+            position: this.holdPosition.clone()
+        };
+        this.waterImpactState = {
+            active: true,
+            mode: 'hover',
+            position: this.holdPosition.clone(),
+            alert: this.safetyAlert
+        };
+
+        if (this.flightState !== DRONE_STATES.IDLE) {
+            this.flightState = DRONE_STATES.IDLE;
+        }
+    }
+
+    getSafetyFilteredKeys(keys = this.keys) {
+        const filteredKeys = { ...keys };
+        const inputMask = this.safetyState?.inputMask;
+
+        if (!inputMask) {
+            return filteredKeys;
+        }
+
+        Object.entries(inputMask).forEach(([key, allowed]) => {
+            if (!allowed && Object.prototype.hasOwnProperty.call(filteredKeys, key)) {
+                filteredKeys[key] = false;
+            }
+        });
+
+        return filteredKeys;
+    }
+}
+
+function toVector3(value, fallback) {
+    if (value instanceof THREE.Vector3) {
+        return value.clone();
+    }
+
+    if (Array.isArray(value)) {
+        return new THREE.Vector3(
+            Number(value[0] ?? fallback.x),
+            Number(value[1] ?? fallback.y),
+            Number(value[2] ?? fallback.z)
+        );
+    }
+
+    if (value && typeof value === 'object') {
+        return new THREE.Vector3(
+            Number(value.x ?? fallback.x),
+            Number(value.y ?? fallback.y),
+            Number(value.z ?? fallback.z)
+        );
+    }
+
+    return fallback.clone();
+}
+
+function vectorToPlain(vector = {}) {
+    return {
+        x: Number(vector.x ?? 0),
+        y: Number(vector.y ?? 0),
+        z: Number(vector.z ?? 0)
+    };
 }
